@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  DEPARTMENT_HEAD
+  AI_MANAGER
+  CEO
+}
+
+enum ReportStatus {
+  DRAFT
+  SUBMITTED
+  AI_REVIEWED
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalType {
+  MAJOR_DECISION
+  SPENDING
+  PUBLISHING_DEPLOYMENT
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String
+  email         String     @unique
+  passwordHash  String
+  role          Role
+  departmentId  String?
+  department    Department? @relation(fields: [departmentId], references: [id])
+  reports       Report[]
+  reviews       Review[]
+  approvals     Approval[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime   @default(now())
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  users       User[]
+  reports     Report[]
+  createdAt   DateTime @default(now())
+}
+
+model Report {
+  id           String       @id @default(cuid())
+  title        String
+  content      String
+  status       ReportStatus @default(DRAFT)
+  departmentId String
+  department   Department   @relation(fields: [departmentId], references: [id])
+  authorId     String
+  author       User         @relation(fields: [authorId], references: [id])
+  review       Review?
+  approvals    Approval[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  reportId  String   @unique
+  report    Report   @relation(fields: [reportId], references: [id])
+  reviewerId String
+  reviewer  User     @relation(fields: [reviewerId], references: [id])
+  summary   String
+  score     Int
+  passed    Boolean
+  createdAt DateTime @default(now())
+}
+
+model Approval {
+  id          String         @id @default(cuid())
+  reportId    String
+  report      Report         @relation(fields: [reportId], references: [id])
+  type        ApprovalType
+  status      ApprovalStatus @default(PENDING)
+  approverId  String?
+  approver    User?          @relation(fields: [approverId], references: [id])
+  decisionNote String?
+  createdAt   DateTime       @default(now())
+  decidedAt   DateTime?
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  details   String
+  reportId  String?
+  report    Report?  @relation(fields: [reportId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
